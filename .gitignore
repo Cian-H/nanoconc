@@ -77,3 +77,5 @@ Manifest.toml
 notes/*
 # My terrible, newbie attempt at version control (yes, shouldve jsut learned git)
 backups/*
+# Directory for holding the code for various bhmie implementations
+.bhmielibs/*
