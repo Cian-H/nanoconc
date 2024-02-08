@@ -1,5 +1,8 @@
 run(`scripts/build_other_impls.sh`)
 
+# using Debugger
+using BenchmarkTools
+
 include("src/miemfp.jl")
 # using miemfp
 
@@ -15,7 +18,7 @@ function bhmie_c(x::Float32, cxref::ComplexF32, nang::UInt32, cxs1::Vector{Compl
 
     # Call the C function
     ccall((:bhmie, ".bhmielibs/bhmie-c/bhmie.so"), Cvoid,
-        (Float32, ComplexF32, UInt32, Ptr{ComplexF32}, Ptr{ComplexF32}, Ref{Float32}, Ref{Float32}, Ref{Float32}, Ref{Float32}),
+        (Float32, ComplexF32, UInt32, Vector{ComplexF32}, Vector{ComplexF32}, Ref{Float32}, Ref{Float32}, Ref{Float32}, Ref{Float32}),
         x, cxref, nang, cxs1, cxs2, qext, qsca, qback, gsca)
 
     # Return the output variables
@@ -54,27 +57,44 @@ function bhmie_fortran77(x::Float32, refrel::ComplexF32, nang::Int32, s1::Vector
     return qext[], qsca[], qback[], gsca[]
 end
 
-# Create test data
-x = Float32(1.0)  # Example value for x
-cxref = ComplexF32(1.5, 0.5)  # Example complex refractive index
+# Fixed testing values
 nang = UInt32(2)  # Example number of angles
 
-# Example arrays for scattering amplitudes, initialized with dummy complex values
-cxs1 = [ComplexF32(0.1, 0.2) for _ in 1:nang]
-cxs2 = [ComplexF32(0.3, 0.4) for _ in 1:nang]
+c_result = @benchmark bhmie_c(x, cxref, nang, cxs1, cxs2) setup=(
+    x = rand(Float32);
+    cxref = rand(ComplexF32);
+    nang = UInt32($nang);
+    cxs1 = rand(ComplexF32, $nang);
+    cxs2 = rand(ComplexF32, $nang);
+)
 
-# Test C wrapper
-qext, qsca, qback, gsca = bhmie_c(x, cxref, nang, cxs1, cxs2)
-println("bhmie_c output: qext = $qext, qsca = $qsca, qback = $qback, gsca = $gsca")
+f_result = @benchmark bhmie_fortran(x, cxref, nang, cxs1, cxs2) setup=(
+    x = rand(Float32);
+    cxref = rand(ComplexF32);
+    nang = Int32($nang);
+    cxs1 = rand(ComplexF32, $nang);
+    cxs2 = rand(ComplexF32, $nang);
+)
 
-# Test Fortran wrapper
-qext, qsca, qback, gsca = bhmie_fortran(x, cxref, Int32(nang), cxs1, cxs2)
-println("bhmie_fortran output: qext = $qext, qsca = $qsca, qback = $qback, gsca = $gsca")
+f77_result = @benchmark bhmie_fortran77(x, cxref, nang, cxs1, cxs2) setup=(
+    x = rand(Float32);
+    cxref = rand(ComplexF32);
+    nang = Int32($nang);
+    cxs1 = rand(ComplexF32, $nang);
+    cxs2 = rand(ComplexF32, $nang);
+)
 
-# Test Fortran77 wrapper
-qext, qsca, qback, gsca = bhmie_fortran77(x, cxref, Int32(nang), cxs1, cxs2)
-println("bhmie_fortran77 output: qext = $qext, qsca = $qsca, qback = $qback, gsca = $gsca")
+j_result = @benchmark miemfp.bhmie(Float64(x), ComplexF64(cxref), nang) setup=(
+    x = rand(Float32);
+    cxref = rand(ComplexF32);
+    nang = UInt32($nang);
+)
 
-# Test Julia wrapper
-qext, qsca, qback, gsca = miemfp.bhmie(Float64(x), ComplexF64(cxref), nang)
-println("bhmie_julia output: qext = $qext, qsca = $qsca, qback = $qback, gsca = $gsca")
+println("\nC Implementation")
+display(c_result)
+println("\nFortran Implementation")
+display(f_result)
+println("\nFortran 77 Implementation")
+display(f77_result)
+println("\nJulia Implementation")
+display(j_result)
