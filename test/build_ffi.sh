@@ -10,9 +10,12 @@ base_url="http://scatterlib.wikidot.com/local--files/codes/"
 # Next, let's create a list of the codebases we want to pull
 codebases=("bhmie-f.zip" "bhmie-c.zip")
 
-# Then, let's create a directory to pull the codebases to
-bhmie_dir=".bhmielibs"
-mkdir -p $bhmie_dir
+# if bhmie_dir containers bhmie-c/bhmie.so, bhmie-f/bhmie.so, and bhmie-f/bhmie_f77.so then we can skip the build
+bhmie_dir=$1
+if [ -f $bhmie_dir/bhmie-c/bhmie.so ] && [ -f $bhmie_dir/bhmie-f/bhmie.so ] && [ -f $bhmie_dir/bhmie-f/bhmie_f77.so ]; then
+    echo "bhmie-c/bhmie.so, bhmie-f/bhmie.so, and bhmie-f/bhmie_f77.so already exist. Skipping build."
+    exit 0
+fi
 
 # Now, let's pull the codebases
 for codebase in ${codebases[@]}; do

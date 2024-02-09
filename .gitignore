@@ -77,5 +77,8 @@ Manifest.toml
 notes/*
 # My terrible, newbie attempt at version control (yes, shouldve jsut learned git)
 backups/*
-# Directory for holding the code for various bhmie implementations
-.bhmielibs/*
+# Directory for caching test data
+*/.cache/*
+# For now, performance will be tracked in a benchmarks folder
+*benchmarks
+*benchmarks/*
