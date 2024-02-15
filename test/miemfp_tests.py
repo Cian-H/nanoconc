@@ -31,7 +31,7 @@ def compare_bhmie_functions(
     @settings(deadline=None)
     @given(
         # Must be bigger than an atom but still nanoscale
-        x=st.floats(min_value=0.1, max_value=100),
+        x=st.floats(min_value=0.1, max_value=500), # max_value > 500 cannot reliably run on C FFI (may need to remove C check in the future)
         # Refractive indeces must be within a physically reasonable range
         cxref=st.tuples(
             st.floats(min_value=0.1, max_value=4.0),

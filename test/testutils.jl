@@ -25,6 +25,10 @@ function init_pyenv()
     end
 end
 
+macro namedtest(name, test)
+    esc(:(@testset $name begin @test $test end))
+end
+export namedtest
 
 function fieldvalues(obj)
     [getfield(obj, f) for f in fieldnames(typeof(obj))]

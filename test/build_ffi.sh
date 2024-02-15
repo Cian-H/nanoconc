@@ -13,7 +13,6 @@ codebases=("bhmie-f.zip" "bhmie-c.zip")
 # if bhmie_dir containers bhmie-c/bhmie.so, bhmie-f/bhmie.so, and bhmie-f/bhmie_f77.so then we can skip the build
 bhmie_dir=$1
 if [ -f $bhmie_dir/bhmie-c/bhmie.so ] && [ -f $bhmie_dir/bhmie-f/bhmie.so ] && [ -f $bhmie_dir/bhmie-f/bhmie_f77.so ]; then
-    echo "FFI shared objects already exist. Skipping build."
     exit 0
 fi
 

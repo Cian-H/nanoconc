@@ -7,7 +7,7 @@ include("../src/nanoconc.jl")
 TestUtils.init_pyenv()
 
 # include("nanoconc_tests.jl")
-TestUtils.singleton_include("miemfp_tests.jl", :miemfp, @__MODULE__)
+@testset "miemfp" include("miemfp_tests.jl")
 # include("quantumcalc_tests.jl")
 TestUtils.singleton_include("benchmarks.jl", :Benchmarks, @__MODULE__)
 
