@@ -269,11 +269,11 @@ struct q_to_sigma
     geometric_cross_section::Vector{Float64}
 
     function q_to_sigma(diameter::Vector{Float64})::q_to_sigma
-        new(π .* ((diameter ./ 2).^2))
-    end 
+        new(π .* ((diameter ./ 2) .^ 2))
+    end
 end
 
-function (p::q_to_sigma)(q::Matrix{Float64})::Array{Float64, 3}
+function (p::q_to_sigma)(q::Matrix{Float64})::Array{Float64,3}
     # Calculate the extinction cross-section
     hcat([q .* x for x in p.geometric_cross_section])
 end

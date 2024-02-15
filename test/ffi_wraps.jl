@@ -1,7 +1,5 @@
 module FFIWraps
 
-include("../anchors.jl")
-
 if !@isdefined TEST_DIR
     include("../anchors.jl")
     import .Anchors: TEST_DIR
@@ -45,8 +43,8 @@ function bhmie_fortran(x::Float32, refrel::ComplexF32, nang::Int32, s1::Vector{C
 
     # Call the Fortran subroutine
     ccall((:bhmie_, "$BHMIELIBS_DIR/bhmie-f/bhmie.so"), Cvoid,
-          (Ref{Float32}, Ref{ComplexF32}, Ref{Int32}, Ptr{ComplexF32}, Ptr{ComplexF32}, Ref{Float32}, Ref{Float32}, Ref{Float32}, Ref{Float32}),
-          x, refrel, nang, s1, s2, qext, qsca, qback, gsca)
+        (Ref{Float32}, Ref{ComplexF32}, Ref{Int32}, Ptr{ComplexF32}, Ptr{ComplexF32}, Ref{Float32}, Ref{Float32}, Ref{Float32}, Ref{Float32}),
+        x, refrel, nang, s1, s2, qext, qsca, qback, gsca)
 
     # Return the modified values
     return qext[], qsca[], qback[], gsca[]
@@ -61,8 +59,8 @@ function bhmie_fortran77(x::Float32, refrel::ComplexF32, nang::Int32, s1::Vector
 
     # Call the Fortran subroutine
     ccall((:bhmie_, "$BHMIELIBS_DIR/bhmie-f/bhmie.so"), Cvoid,
-          (Ref{Float32}, Ref{ComplexF32}, Ref{Int32}, Ptr{ComplexF32}, Ptr{ComplexF32}, Ref{Float32}, Ref{Float32}, Ref{Float32}, Ref{Float32}),
-          x, refrel, nang, s1, s2, qext, qsca, qback, gsca)
+        (Ref{Float32}, Ref{ComplexF32}, Ref{Int32}, Ptr{ComplexF32}, Ptr{ComplexF32}, Ref{Float32}, Ref{Float32}, Ref{Float32}, Ref{Float32}),
+        x, refrel, nang, s1, s2, qext, qsca, qback, gsca)
 
     # Return the modified values
     return qext[], qsca[], qback[], gsca[]

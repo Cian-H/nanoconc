@@ -4,25 +4,17 @@ using PropCheck
 using Debugger
 using PyCall
 
+if !@isdefined TestUtils
+    include("testutils.jl")
+end
 
-include("../anchors.jl")
+TestUtils.init_pyenv()
+TestUtils.singleton_include("../anchors.jl", :Anchors, @__MODULE__)
 
 import .Anchors: TEST_DIR, SRC_DIR, ROOT_DIR
 
-if !@isdefined TestUtils
-    include(joinpath(TEST_DIR, "testutils.jl"))
-end
-if !@isdefined miemfp
-    include(joinpath(SRC_DIR, "miemfp.jl"))
-end
-if !@isdefined FFIWraps
-    include(joinpath(TEST_DIR, "ffi_wraps.jl"))
-end
-
-
-# Set up the Python environment
-run(`$ROOT_DIR/setup_venv.sh`)
-ENV["PYTHON"] = joinpath(ROOT_DIR, ".venv/bin/python")
+TestUtils.singleton_include(joinpath(SRC_DIR, "miemfp.jl"), :miemfp, @__MODULE__)
+TestUtils.singleton_include(joinpath(TEST_DIR, "ffi_wraps.jl"), :FFIWraps, @__MODULE__)
 
 @pyinclude(joinpath(TEST_DIR, "miemfp_tests.py"))
 

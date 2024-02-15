@@ -68,7 +68,7 @@ Corrects refractive index and attenuation coefficient values to account for
 the mean free-path effect on the free conductance electrons in the particles
 (translated from Haiss et als FORTRAN implementation)
 """
- function mfp(fv::Float64, wavel::Float64, radcor::Float64, omp::Float64,
+function mfp(fv::Float64, wavel::Float64, radcor::Float64, omp::Float64,
     om0::Float64, rn::Float64, rk::Float64)::Tuple{Float64,Float64,Float64}
 
     om, om0r, om_sq, _, omp_sq, om0r_sq, om_sq_plus_om0_sq =
@@ -185,8 +185,8 @@ function bhmie(x::Float64, refrel::ComplexF64, nang::UInt32
     y::ComplexF64 = x * refrel
     nstop::UInt32 = UInt32(round(x + 4.0 * cbrt(x) + 2.0))
     nn::UInt32 = UInt32(round(max(nstop, abs(y)) + 14))
-    amu::Vector{Float64} = cos.((1.570796327 / Float64(nang - 1)).*Float64.(0:nang-1))    
-    
+    amu::Vector{Float64} = cos.((1.570796327 / Float64(nang - 1)) .* Float64.(0:nang-1))
+
     d = Vector{ComplexF64}(undef, nn)
     d[nn] = ComplexF64(0.0, 0.0)
     @simd for n in nn:-1:2
@@ -273,7 +273,7 @@ end
 const _cache = Dict{UInt64,InterpolationPair}()
 
 "Helper function to get the interpolation objects for rn and rk"
- function _get_rnrk_interp_objects(refcore::Array{Float64,2})::InterpolationPair
+function _get_rnrk_interp_objects(refcore::Array{Float64,2})::InterpolationPair
     refcore_hash = hash(refcore)
     if !haskey(_cache, refcore_hash)
         _cache[refcore_hash] = InterpolationPair(LinearInterpolation(refcore[:, 1], refcore[:, 2]), LinearInterpolation(refcore[:, 1], refcore[:, 3]))
@@ -308,7 +308,7 @@ struct _mfp
     om0::Float64
 end
 
-function(p::_mfp)(wavel::Float64, rn::Float64, rk::Float64)::ComplexF64
+function (p::_mfp)(wavel::Float64, rn::Float64, rk::Float64)::ComplexF64
     refre1, refim1, _ = mfp(p.fv, wavel, p.radcore, p.omp, p.om0, rn, rk)
     return ComplexF64(refre1, refim1)::ComplexF64
 end
