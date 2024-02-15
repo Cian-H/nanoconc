@@ -67,10 +67,10 @@ if abspath(PROGRAM_FILE) == @__FILE__
     current_package_version = Pkg.TOML.parsefile("$ROOT_DIR/Project.toml")["version"]
 
     function display_to_file(io, x)
-        show(IOContext(io, :limit => false), "text/plain", x)
+        show(IOContext(io, :limit => false, :color => true), "text/plain", x)
     end
 
-    open("$ROOT_DIR/benchmarks/$current_package_version.txt", "w") do io
+    open("$ROOT_DIR/benchmarks/$current_package_version.ansi", "w") do io
         println(io, "C Implementation")
         display_to_file(io, result[1])
         println(io, "\n\nFortran Implementation")

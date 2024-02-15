@@ -53,6 +53,6 @@ done
 
 # And, finally, we can compile the C, and Fortran implementations
 cd $bhmie_dir
-gcc -shared -fPIC -o bhmie-c/bhmie.so bhmie-c/bhmie.c bhmie-c/complex.c bhmie-c/nrutil.c -lm -Wno-builtin-declaration-mismatch -Wno-implicit-function-declaration
-gfortran -shared -fPIC -o bhmie-f/bhmie.so bhmie-f/bhmie.f
-gfortran -shared -fPIC -o bhmie-f/bhmie_f77.so bhmie-f/bhmie_f77.f
+gcc -g -shared -fPIC -o bhmie-c/bhmie.so bhmie-c/bhmie.c bhmie-c/complex.c bhmie-c/nrutil.c -lm -Wno-builtin-declaration-mismatch -Wno-implicit-function-declaration
+gfortran -g -shared -fPIC -o bhmie-f/bhmie.so bhmie-f/bhmie.f
+gfortran -g -shared -fPIC -o bhmie-f/bhmie_f77.so bhmie-f/bhmie_f77.f

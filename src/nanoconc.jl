@@ -49,6 +49,7 @@ columns entitled "w","n" and "k" for wavelength in nm, n and k respectively)
 function addmaterial(z::Float64, am::Float64, rho::Float64, res::Float64,
     filepath::String, material::String, description::String;
     disp::Bool=true)
+    flag = false
     try
         flag = h5open(matfile, "r") do file
             has(file, material)
@@ -96,6 +97,7 @@ An alternative version of the addmaterial function for materials with known mie
 function addmaterial(omp::Float64, om0::Float64, fv::Float64,
     filepath::String, material::String, description::String;
     disp::Bool=true)
+    flag = false
     try
         flag = h5open(matfile, "r") do file
             has(file, material)

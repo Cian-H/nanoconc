@@ -22,4 +22,9 @@ function test_from_serialized(fn::Function, filename::String)
     @test deep_compare([fn(a...; kw...) for (a, kw) in argskwargs], out)
 end
 
-end # module TestUtils
+function asymmetric_floatvec_to_complexvec(vec_a::Vector{Float32}, vec_b::Vector{Float32})
+    shortest = min(length(vec_a), length(vec_b))
+    ComplexF32.(vec_a[1:shortest], vec_b[1:shortest])
+end
+
+end
