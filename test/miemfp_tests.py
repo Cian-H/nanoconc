@@ -22,9 +22,9 @@ def compare_bhmie_functions(
         # This is to ensure that only one instance of each function is running at a time
         # to avoid memory issues in the FFI code
         await event1.wait()
-        f1_result = f1(x, cxref, 2, cxs1, cxs2)[:2]
+        f1_result = f1(x, cxref, 2, cxs1, cxs2)[:2]  # Only testing at nang = 2 to avoid memory issues
         await event2.wait()
-        f2_result = f2(x, cxref, 2, cxs1, cxs2)[:2]
+        f2_result = f2(x, cxref, 2, cxs1, cxs2)[:2]  # Only testing at nang = 2 to avoid memory issues
 
         return np.all(np.isclose(f1_result, f2_result))
 

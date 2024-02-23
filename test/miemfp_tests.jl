@@ -1,7 +1,6 @@
 using Test
 using Random
 using PropCheck
-using Debugger
 using PyCall
 
 if !@isdefined TestUtils
@@ -25,7 +24,7 @@ miemfp.bhmie(
     nang::Int64,
     s1::Vector{ComplexF64},
     s2::Vector{ComplexF64},
-) = miemfp.bhmie(x, cxref, UInt32(nang))
+) = miemfp.bhmie(x, cxref, nang)
 
 function miemfp.bhmie(
     x::Float64,

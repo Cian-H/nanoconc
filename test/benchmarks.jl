@@ -3,15 +3,16 @@ module Benchmarks
 include("../anchors.jl")
 include("ffi_wraps.jl")
 
-import .Anchors.ROOT_DIR
+import .Anchors.SRC_DIR
 import .FFIWraps: bhmie_c, bhmie_fortran, bhmie_fortran77
 using BenchmarkTools
+using InteractiveUtils #! DEBUG
 
-include("$ROOT_DIR/src/miemfp.jl")
+include("$SRC_DIR/miemfp.jl")
 
 function bench_vs_ffi()
     # Fixed testing values
-    nang = UInt32(2)  # Example number of angles
+    nang = 2  # Example number of angles
 
     c_result = @benchmark bhmie_c(x, cxref, nang, cxs1, cxs2) setup=(
         x = rand(Float32);
@@ -36,11 +37,11 @@ function bench_vs_ffi()
         cxs1 = rand(ComplexF32, $nang);
         cxs2 = rand(ComplexF32, $nang);
     )
-
-    j_result = @benchmark miemfp.bhmie(Float64(x), ComplexF64(cxref), nang) setup=(
+    
+    j_result = @benchmark miemfp.bhmie(Float64(x), ComplexF64(cxref), Int64(nang)) setup=(
         x = rand(Float32);
         cxref = rand(ComplexF32);
-        nang = UInt32($nang);
+        nang = $nang;
     )
 
     println("\nC Implementation")

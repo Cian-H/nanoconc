@@ -4,20 +4,46 @@ parameters for coated/uncoated particles of a given size/material
 """
 @fastmath module miemfp
 
-#############################################################################
-# STATUS NOTES:                                                             #
-# Synchronous parallelization implemented for bare calculations, notable    #
-# performance increase. Need to do same for coated                          #
-#############################################################################
-
 using Base.Threads
-using Distributed
 using Memoize
 using Interpolations
+using StaticArrays
 
 const PI_5_996E3::Float64 = pi * 5.996e3
-const TWO_PI::Float64 = 2 * pi
+const TWO_PI::Float64 = 2 * π
+const HALF_PI::Float64 = π / 2
 const BHCOAT_DEL::Float64 = 1e-8
+
+# Avoiding recomputing amu on every loop saves a lot of unnecessary allocations
+const PRECOMPUTED_AMU = @SVector [
+    1.0, 0.5403023058681398, -0.4161468365471424, -0.9899924966004454, -0.6536436208636119, 0.28366218546322625,
+    0.960170286650366, 0.7539022543433046, -0.14550003380861354, -0.9111302618846769, -0.8390715290764524,
+    0.004425697988050785, 0.8438539587324921, 0.9074467814501962, 0.1367372182078336, -0.7596879128588213,
+    -0.9576594803233847, -0.27516333805159693, 0.6603167082440802, 0.9887046181866692, 0.40808206181339196,
+    -0.5477292602242684, -0.9999608263946371, -0.5328330203333975, 0.424179007336997, 0.9912028118634736,
+    0.6469193223286404, -0.2921388087338362, -0.9626058663135666, -0.7480575296890004, 0.15425144988758405,
+    0.9147423578045313, 0.8342233605065102, -0.013276747223059479, -0.8485702747846052, -0.9036922050915067,
+    -0.12796368962740468, 0.7654140519453434, 0.9550736440472949, 0.26664293235993725, -0.6669380616522619,
+    -0.9873392775238264, -0.39998531498835127, 0.5551133015206257, 0.9998433086476912, 0.5253219888177297,
+    -0.4321779448847783, -0.9923354691509287, -0.6401443394691997, 0.3005925437436371, 0.9649660284921133,
+    0.7421541968137826, -0.16299078079570548, -0.9182827862121189, -0.8293098328631502, 0.022126756261955736,
+    0.853220107722584, 0.8998668269691938, 0.11918013544881928, -0.7710802229758452, -0.9524129804151563,
+    -0.25810163593826746, 0.6735071623235862, 0.9858965815825497
+]
+
+"Computes values of amu where nang > 64"
+@memoize function compute_amu(nang::Int64)::Vector{Float64}
+    cos.((HALF_PI / (nang - 1)) .* (63:nang-2))
+end
+
+"Returns amu values generated as efficiently as possible for a given nang value"
+function get_amu(nang::Int64)::Vector{Float64}
+    if nang <= 64
+        return @views PRECOMPUTED_AMU[1:nang]
+    else
+        return @views vcat(PRECOMPUTED_AMU, compute_amu(nang))
+    end
+end
 
 "Helper function for calculating om"
 @memoize function _om_calc(wavel::Float64)::Float64
@@ -119,8 +145,8 @@ function bhcoat(x::Float64, y::Float64, rfrel1::ComplexF64, rfrel2::ComplexF64
         d1y2::ComplexF64 = 1.0 / (n / y2 - d0y2) - n / y2
 
         if iflag == false
-            d1x1 = 1.0 / (n / x1 - d0x1) - n / x1
-            d1x2 = 1.0 / (n / x2 - d0x2) - n / x2
+            d1x1 = x1 / (n - (d0x1 * x1)) - n / x1
+            d1x2 = x1 / (n - (d0x2 * x2)) - n / x2
             chix2 = two_n_minus_1 * chi1x2 / x2 - chi0x2
             chiy2 = two_n_minus_1 * chi1y2 / y2 - chi0y2
             chipx2::ComplexF64 = chi1x2 - n * chix2 / x2
@@ -175,29 +201,30 @@ function bhcoat(x::Float64, y::Float64, rfrel1::ComplexF64, rfrel2::ComplexF64
     return (qext, qsca, qback)
 end
 
+
 """
 Finds scattering parameters for uncoated particles. Heavily modified, but originally
 based on a combination of the original FORTRAN77 BHMIE algorithm and a Python
 implementation attributed to Herbert Kaiser hosted on ScatterLib (http://scatterlib.wikidot.com/mie)
 """
-function bhmie(x::Float64, refrel::ComplexF64, nang::UInt32
+function bhmie(x::Float64, refrel::ComplexF64, nang::Int64
 )::Tuple{Float64,Float64,Float64,Array{ComplexF64,1},Array{ComplexF64,1}}
     y::ComplexF64 = x * refrel
-    nstop::UInt32 = UInt32(round(x + 4.0 * cbrt(x) + 2.0))
-    nn::UInt32 = UInt32(round(max(nstop, abs(y)) + 14))
-    amu::Vector{Float64} = cos.((1.570796327 / Float64(nang - 1)) .* Float64.(0:nang-1))
+    nstop::Int64 = round(x + 4.0 * cbrt(x) + 2.0)
+    nn::Int64 = round(max(nstop, abs(y)) + 14)
+    amu::Vector = get_amu(nang)
 
+    y_inv = inv(y)
     d = Vector{ComplexF64}(undef, nn)
     d[nn] = ComplexF64(0.0, 0.0)
-    @simd for n in nn:-1:2
-        let n_over_y = n / y
-            @views d[n-1] = n_over_y - (1.0 / (d[n] + n_over_y))
-        end
+    for n in nn:-1:2
+        n_over_y = y_inv * n
+        d[n-1] = n_over_y - inv(d[n] + n_over_y)
     end
 
     psi0 = cos(x)
     psi1 = sin(x)
-    qsca::Float64 = 0.0
+    qsca = 0.0
     # xi0 = ComplexF64(psi0, psi1)
     xi1 = ComplexF64(psi1, -psi0)
     chi1 = psi0
@@ -206,54 +233,59 @@ function bhmie(x::Float64, refrel::ComplexF64, nang::UInt32
     s1_2 = zeros(ComplexF64, nang)
     s2_1 = zeros(ComplexF64, nang)
     s2_2 = zeros(ComplexF64, nang)
-    pi0::Vector{Float64} = zeros(nang)
-    pi1::Vector{Float64} = ones(nang)
-    tau::Vector{Float64} = similar(Vector{Float64}, nang)
-    @inbounds @simd for n in (1:nstop)::UnitRange{Int64}
-        psi, chi = let nm1x2 = 2 * n - 1
-            nm1x2 * psi1 / x - psi0,
-            nm1x2 * chi1 / x - chi0
-        end
+    pi0 = zeros(Float64, nang)
+    pi1 = ones(Float64, nang)
+    tau = Vector{Float64}(undef, nang)
+
+    @inbounds for n in 1:nstop
+        nm1x2 = Float64(2 * n - 1)
+        psi = nm1x2 * psi1 / x - psi0
+        chi = nm1x2 * chi1 / x - chi0
+
         xi = psi - (chi * im)
-        an::ComplexF64, bn::ComplexF64 = let @views dn = d[n]
-            let an_mult::ComplexF64 = dn / refrel + n / x
-                (an_mult * psi - psi1) / (an_mult * xi - xi1)
-            end,
-            let bn_mult::ComplexF64 = refrel * dn + n / x
-                (bn_mult * psi - psi1) / (bn_mult * xi - xi1)
-            end
-        end
+        dn = d[n]
+        an_mult::ComplexF64 = dn / refrel + n / x
+        an::ComplexF64 = (an_mult * psi - psi1) / (an_mult * xi - xi1)
+        bn_mult::ComplexF64 = refrel * dn + n / x
+        bn::ComplexF64 = (bn_mult * psi - psi1) / (bn_mult * xi - xi1)
 
-        qsca += (2 * n + 1) * ((abs(an)^2) + (abs(bn)^2))
         pi_ = pi1
+        np1 = n + 1
+        _2np1 = 2 * n + 1
 
-        let np1x2 = 2 * n + 1, tau = n * amu .* pi_ - (n + 1) .* pi0
-            let fn = np1x2 / (n * (n + 1)), anpi = an * pi_, antau = an * tau, bnpi = bn * pi_, bntau = bn * tau
-                s1_1::Vector{ComplexF64} .+= fn * (anpi + bntau)
-                s2_1::Vector{ComplexF64} .+= fn * (antau + bnpi)
-                if isodd(n)
-                    s1_2::Vector{ComplexF64} .+= fn * (anpi - bntau)
-                    s2_2::Vector{ComplexF64} .+= fn * (bnpi - antau)
-                else
-                    s1_2::Vector{ComplexF64} .-= fn * (anpi - bntau)
-                    s2_2::Vector{ComplexF64} .-= fn * (bnpi - antau)
-                end
-            end
-            pi1 = (np1x2 * amu .* pi_ - (n + 1) .* pi0) / n
-        end
+        qsca += _2np1 * ((abs(an)^2) + (abs(bn)^2))
+
+        fn = _2np1 / (n * (np1))
+        pi1 = (_2np1 * amu .* pi_ - (n + 1) .* pi0) / n
+        
+        tau = n .* amu .* pi_ .- np1 .* pi0
+        anpi = an * pi_
+        antau = an .* tau
+        bnpi = bn * pi_
+        bntau = bn .* tau
+        s1_1 .+= fn .* (anpi .+ bntau)
+        s2_1 .+= fn .* (bnpi .+ antau)
+        
+        #* Optimisation: branchless if statement toggling between .+= and .-= for s1_2 and s2_2
+        isodd_factor = Float64(isodd(n)) - Float64(!isodd(n))
+        s1_2 .+= isodd_factor .* fn .* (anpi .- bntau)
+        s2_2 .+= isodd_factor .* fn .* (bnpi .- antau)
+
         psi0, chi0 = psi1, chi1
         psi1, chi1 = psi, chi
         xi1 = ComplexF64(psi1, -chi1)
         pi0 = pi_
     end
-    @inbounds s1::Vector{ComplexF64} = vcat(s1_1, s1_2[1:-1:end-1])
-    @inbounds s2::Vector{ComplexF64} = vcat(s2_1, s2_2[1:-1:end-1])
+
+    @inbounds s1::Vector{ComplexF64} = @views vcat(s1_1, reverse(s1_2))
+    @inbounds s2::Vector{ComplexF64} = @views vcat(s2_1, reverse(s2_2))
+
     x_sq::Float64 = x^2
-    qsca *= (2.0 / (x_sq))
-    qext::Float64, qback::Float64 = let four_over_x_sq::Float64 = 4.0 / x_sq
-        (four_over_x_sq) * real(s1[1]),
-        (four_over_x_sq) * (abs(s1[2*nang-1])^2)
-    end
+    four_over_x_sq::Float64 = 4.0 / x_sq
+    qsca *= four_over_x_sq / 2
+    qext = four_over_x_sq * real(s1[1])
+    qback = four_over_x_sq * (abs(s1[2*nang-1])^2)
+
     return (qext, qsca, qback, s1, s2)
 end
 
